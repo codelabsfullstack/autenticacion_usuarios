@@ -2,6 +2,9 @@ const express = require('express');
 const session = require('express-session');
 const MongoStore = require('connect-mongo')(session);
 const mongoose = require('mongoose')
+const bodyParser = require('body-parser');
+const passport = require('passport');
+const passportConfig = require('./config/passport.js');
 
 const MONGO_URL ='mongodb://127.0.0.1:27017/auth';
 const app = express();
@@ -14,19 +17,19 @@ mongoose.connection.on('error', (err) => {
 });
 
 const Usuario = require('./Models/Usuarios.js');
-const u = new Usuario({
-	email: 'ricardo@gmail.com',
-	nombre: 'Ricardo',
-	password: '123456'
-});
+// const u = new Usuario({
+// 	email: 'ricardo@gmail.com',
+// 	nombre: 'Ricardo',
+// 	password: '123456'
+// });
 
-u.save()
-	.then(() => {
-		console.log('guardado');
-	})
-	.catch((error) => {
-		console.log(error);
-	})
+// u.save()
+// 	.then(() => {
+// 		console.log('guardado');
+// 	})
+// 	.catch((error) => {
+// 		console.log(error);
+// 	})
 
 app.use(session({
 	secret: 'ESTO ES SECRETO',
@@ -38,9 +41,26 @@ app.use(session({
 	})
 }))
 
-app.get('', (req, res) => {
-	req.session.cuenta = req.session.cuenta ? req.session.cuenta + 1 : 1;
-	res.send(`Hola! Has visto esta página: ${req.session.cuenta}`);
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
+
+// app.get('/', (req, res) => {
+// 	req.session.cuenta = req.session.cuenta ? req.session.cuenta + 1 : 1;
+// 	res.send(`Hola! Has visto esta página: ${req.session.cuenta}`);
+// });
+
+const controladorUsuario = require('./controllers/usuario.js');
+app.post('/signup', controladorUsuario.postSignup);
+app.post('/login', controladorUsuario.postLogin);
+app.get('/logout', passportConfig.estaAutenticado, controladorUsuario.logout);
+
+app.get('/usuarioInfo', (req, res) => {
+	// passport agrega 'user' al objecto 'req'
+	
+	res.json(req.user);
 })
 
 app.listen(3000, () => {
